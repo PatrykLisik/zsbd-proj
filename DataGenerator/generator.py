@@ -145,5 +145,45 @@ def genUczniowie(howMany, max_class_id, max_opiekun_id):
     return ans
 
 
-for i in genUczeniowie(4, 12, 6):
+def genNauczanaKlasaPrzedmiot(howMany, max_id_nauczyciela,
+                              max_klass_id, max_przedmiot_id=len(przedmioty)):
+    nauczycielIDs = list(range(max_id_nauczyciela))
+    klasIDs = list(range(max_klass_id))
+    przedmiotIDs = list(range(max_przedmiot_id))
+    ans = []
+    for id in range(howMany):
+        nauczycielID = random.choice(nauczycielIDs)
+        klasID = random.choice(klasIDs)
+        przedmiotID = random.choice(przedmiotIDs)
+        ans.append(
+            "INSERT INTO Uczen VALUES({},{},{},{});"
+            .format(id, nauczycielID, klasID, przedmiotID)
+        )
+
+    return ans
+
+
+def genProg(nauczyciel_id):
+    """
+    jeden zahardkodowany próg
+    """
+    ans = []
+    id = 0
+    ProcentNa2 = 40
+    ProcentNa2_5 = 50
+    ProcentNa3 = 55
+    ProcentNa3_5 = 60
+    ProcentNa4 = 70
+    ProcentNa4_5 = 80
+    ProcentNa5 = 90
+    ans.append(
+        "INSERT INTO Prog VALUES({},{},{},{},{},{},{},{},{},{});"
+        .format(id, nauczyciel_id, ProcentNa2, ProcentNa2_5,
+                ProcentNa3, ProcentNa3, ProcentNa3_5, ProcentNa4,
+                ProcentNa4_5, ProcentNa5)
+    )
+    return ans
+
+
+for i in genProg(4):
     print(i)
