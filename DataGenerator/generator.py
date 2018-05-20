@@ -1,6 +1,8 @@
 import random
 from random import randint
 import string
+import itertools
+import math
 
 
 def password_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -23,7 +25,6 @@ zenskie = toList("zenskie.txt")
 nazwiska = toList("nazwiska.txt")
 przedmioty = toList("przedmioty.txt")
 imiona = meskie.extend(zenskie)
-print(przedmioty)
 
 
 def genNauczyciele(howMany):
@@ -47,8 +48,41 @@ def genNauczyciele(howMany):
                                                              UserLogin,
                                                              hasla):
         ans.append(
-            "INSERT INTO Nauczyciel VALUES({},{},{},{},{},{},{},{});"
+            "INSERT INTO Nauczyciel VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",{},\"{}\",\"{}\");"
             .format(id, imie, naz, tel, mail, Czyadm, login, pas)
         )
 
     return ans
+
+
+def genPrzedmioty(howMany):
+    ans = []
+    random.shuffle(przedmioty)
+    for id, nazwa_przedmiotu in zip(range(howMany), przedmioty):
+        ans.append(
+            "INSERT INTO Przedmiot VALUES({},\"{}\");"
+            .format(id, nazwa_przedmiotu)
+        )
+    return ans
+
+
+def genKlasy(howMany):
+    """
+    howMany - ilość klas w roczniku
+    """
+    ans = []
+    numberOfYears = 3
+    lettes_string = list(string.ascii_uppercase)[:howMany]
+    letters = itertools.cycle(lettes_string)
+    for id, letter in zip(range(howMany * numberOfYears), letters):
+        year = math.floor(id / howMany) + 1
+        class_number = letter + str(year)
+        ans.append(
+            "INSERT INTO Klasa VALUES({},\"{}\");"
+            .format(id, class_number)
+        )
+    return ans
+
+
+for i in genKlasy(4):
+    print(i)
