@@ -110,7 +110,7 @@ CREATE TABLE Test
 	IDNauczyciela INT,
 	IDProgu INT,
 	IDPrzedmiotu INT,
-	CzasTrwania TIME,
+	DataTestu DATE,
 	MaxLiczbaPytan INT,
     );
 GO
