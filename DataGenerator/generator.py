@@ -3,6 +3,7 @@ from random import randint
 import string
 import itertools
 import math
+import datetime
 
 
 def password_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -185,5 +186,38 @@ def genProg(nauczyciel_id):
     return ans
 
 
-for i in genProg(4):
+def random_date(start=datetime.datetime.now()):
+    current = start
+    curr = current + \
+        datetime.timedelta(days=random.randrange(365),
+                           hours=random.randrange(0, 24)
+                           )
+    return curr
+
+
+def genTest(howMany, max_id_nauczyciela, max_prog_id, max_przedmiot_id):
+    """
+    howMany - ilość testów
+    """
+    ans = []
+    nauczycielIDs = list(range(max_id_nauczyciela))
+    progIDs = list(range(max_prog_id))
+    przedmiotIDs = list(range(max_przedmiot_id))
+    id = 0
+    for i in range(howMany):
+        nazwa = "Test" + str(i)
+        IDPrzedmiotu = random.choice(przedmiotIDs)
+        IDNauczyciela = random.choice(nauczycielIDs)
+        IDProgu = random.choice(progIDs)
+        DataTestu = random_date()
+        MaxLiczbaPytan = random.randrange(40)
+        ans.append(
+            "INSERT INTO Prog VALUES({},\"{}\",{},{},{},{},{},);"
+            .format(id, nazwa, IDNauczyciela,
+                    IDProgu, IDPrzedmiotu, DataTestu, MaxLiczbaPytan)
+        )
+    return ans
+
+
+for i in genNauczyciele(10):
     print(i)
