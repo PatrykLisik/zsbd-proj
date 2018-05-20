@@ -24,12 +24,13 @@ meskie = toList("meskie.txt")
 zenskie = toList("zenskie.txt")
 nazwiska = toList("nazwiska.txt")
 przedmioty = toList("przedmioty.txt")
-imiona = meskie.extend(zenskie)
+imiona = meskie
+imiona.extend(zenskie)
 
 
 def genNauczyciele(howMany):
     ans = []
-    imiona_ = [random.choice(meskie) for _ in range(howMany)]
+    imiona_ = [random.choice(imiona) for _ in range(howMany)]
     nazwiska_ = [random.choice(nazwiska) for _ in range(howMany)]
     telefony = [random_with_N_digits(9) for _ in range(howMany)]
     Emaile = [i.lower() + n.lower() + "@gmail.com" for i,
@@ -84,5 +85,65 @@ def genKlasy(howMany):
     return ans
 
 
-for i in genKlasy(4):
+def genOpiekunowie(howMany):
+    ans = []
+    imiona_ = [random.choice(imiona) for _ in range(howMany)]
+    nazwiska_ = [random.choice(nazwiska) for _ in range(howMany)]
+    telefony = [random_with_N_digits(9) for _ in range(howMany)]
+    Emaile = [i.lower() + n.lower() + "@gmail.com" for i,
+              n in zip(imiona_, nazwiska_)]
+    # W ostatecznej wersji można dać jakieś 1
+    UserLogin = [i.lower() + "_" + n.lower() for i,
+                 n in zip(imiona_, nazwiska_)]
+    hasla = [password_generator() for _ in range(howMany)]
+    ids = list(range(howMany))
+    for id, imie, naz, tel, mail, login, pas in zip(ids, imiona_,
+                                                    nazwiska_,
+                                                    telefony,
+                                                    Emaile,
+                                                    UserLogin,
+                                                    hasla):
+        ZgodaNaMail = random.randrange(0, 2)
+        ZgodaNaSMS = random.randrange(0, 2)
+        ans.append(
+            "INSERT INTO Opiekun VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",{},{});"
+            .format(id, imie, naz, tel, mail, login, pas, ZgodaNaMail, ZgodaNaSMS)
+        )
+
+    return ans
+
+
+def genUczniowie(howMany, max_class_id, max_opiekun_id):
+    ans = []
+    imiona_ = [random.choice(imiona) for _ in range(howMany)]
+    nazwiska_ = [random.choice(nazwiska) for _ in range(howMany)]
+    PESELs = [str(random_with_N_digits(11)) for _ in range(howMany)]
+    telefony = [random_with_N_digits(9) for _ in range(howMany)]
+    Emaile = [i.lower() + n.lower() + "@gmail.com" for i,
+              n in zip(imiona_, nazwiska_)]
+    # W ostatecznej wersji można dać jakieś 1
+    UserLogin = [i.lower() + "_" + n.lower() for i,
+                 n in zip(imiona_, nazwiska_)]
+    hasla = [password_generator() for _ in range(howMany)]
+    ids = list(range(howMany))
+    classIDs = list(range(max_class_id))
+    opiekunIds = list(range(max_opiekun_id))
+    for id, imie, naz, pesel, tel, mail, login, pas, in zip(ids, imiona_,
+                                                            nazwiska_,
+                                                            PESELs,
+                                                            telefony,
+                                                            Emaile,
+                                                            UserLogin,
+                                                            hasla):
+        opID = random.choice(classIDs)
+        classID = random.choice(opiekunIds)
+        ans.append(
+            "INSERT INTO Uczen VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",{},{});"
+            .format(id, imie, naz, pesel, tel, mail, login, pas, opID, classID)
+        )
+
+    return ans
+
+
+for i in genUczeniowie(4, 12, 6):
     print(i)
