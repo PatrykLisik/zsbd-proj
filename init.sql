@@ -4,17 +4,17 @@ CREATE DATABASE Szkola
 GO
 USE Szkola
 
-CREATE TABLE Nauczyciel
-    (IDNauczyciela INT
-	CONSTRAINT  IDNauczyciela_nn NOT NULL,
-	Imie VARCHAR(25),
-	Nazwisko VARCHAR(25),
-	Telefon VARCHAR(9),
-	Email VARCHAR(30),
-	CzyAdmin BIT,
-	UserLogin VARCHAR(15),
-	Haslo VARCHAR(15)
-    );
+CREATE TABLE Nauczyciel
+    (IDNauczyciela INT
+	CONSTRAINT  IDNauczyciela_nn NOT NULL,
+	Imie VARCHAR(25),
+	Nazwisko VARCHAR(25),
+	Telefon VARCHAR(9),
+	Email VARCHAR(45),
+	CzyAdmin BIT,
+	UserLogin VARCHAR(30),
+	Haslo VARCHAR(15)
+    );
 GO
 ALTER TABLE Nauczyciel ADD CONSTRAINT IDNauczyciela_pk PRIMARY KEY (IDNauczyciela);
 GO
@@ -22,7 +22,7 @@ GO
 CREATE TABLE Przedmiot
     (IDPrzedmiotu INT
 	CONSTRAINT  IDPrzedmiotu_nn NOT NULL,
-	Nazwa VARCHAR(25),
+	Nazwa VARCHAR(50),
     );
 GO
 ALTER TABLE Przedmiot ADD CONSTRAINT IDPrzedmiotu_pk PRIMARY KEY (IDPrzedmiotu);
@@ -31,7 +31,7 @@ GO
 CREATE TABLE Klasa
     (IDKlasy INT
 	CONSTRAINT  IDKlasy_nn NOT NULL,
-	Nazwa VARCHAR(25),
+	Nazwa VARCHAR(40),
     );
 GO
 ALTER TABLE Klasa ADD CONSTRAINT IDKlasy_pk PRIMARY KEY (IDKlasy);
@@ -43,8 +43,8 @@ CREATE TABLE Opiekun
 	Imie VARCHAR(25),
 	Nazwisko VARCHAR(25),
 	Telefon VARCHAR(9),
-	Email VARCHAR(30),
-	UserLogin VARCHAR(15),
+	Email VARCHAR(60),
+	UserLogin VARCHAR(30),
 	Haslo VARCHAR(15),
 	ZgodaNaMail BIT,
 	ZgodaNaSMS BIT
@@ -60,8 +60,8 @@ CREATE TABLE Uczen
 	Nazwisko VARCHAR(25),
 	Pesel VARCHAR(11),
 	Telefon VARCHAR(9),
-	Email VARCHAR(30),
-	UserLogin VARCHAR(15),
+	Email VARCHAR(60),
+	UserLogin VARCHAR(40),
 	Haslo VARCHAR(15),
 	IDOpiekuna INT,
 	IDKlasy INT
@@ -89,7 +89,6 @@ GO
 CREATE TABLE Prog
     (IDProgu INT
 	CONSTRAINT  IDProgu_nn NOT NULL,
-	IDNauczyciela INT,
 	ProcentNa2 INT CHECK (ProcentNa2>=0 AND ProcentNa2<=100),
 	ProcentNa2_5 INT CHECK (ProcentNa2_5>=0 AND ProcentNa2_5<=100),
 	ProcentNa3 INT CHECK (ProcentNa3>=0 AND ProcentNa3<=100),
@@ -100,7 +99,6 @@ CREATE TABLE Prog
     );
 GO
 ALTER TABLE Prog ADD CONSTRAINT IDProgu_pk PRIMARY KEY (IDProgu);
-ALTER TABLE Prog ADD CONSTRAINT IDNauczyciela_fk1 FOREIGN KEY (IDNauczyciela) REFERENCES Nauczyciel(IDNauczyciela);
 GO
 
 CREATE TABLE Test
@@ -125,7 +123,6 @@ CREATE TABLE Ocena
 	IDTestu INT,
 	IDUcznia INT,
 	Ocena INT CHECK (Ocena=1 OR Ocena=2 OR Ocena=2.5 OR Ocena=3 OR Ocena=3.5 OR Ocena=4 OR Ocena=4.5 OR Ocena=5),
-	CzyObecny BIT,
 	IDNauczyciela INT,
 	IDPrzedmiotu INT,
 	DataOtrzymania DATE
