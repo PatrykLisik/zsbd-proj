@@ -50,19 +50,19 @@ def genNauczyciele(howMany):
                                                              UserLogin,
                                                              hasla):
         ans.append(
-            "INSERT INTO Nauczyciel VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",{},\"{}\",\"{}\");"
+            "INSERT INTO Nauczyciel VALUES({},\'{}\',\'{}\',\'{}\',\'{}\',{},\'{}\',\'{}\');"
             .format(id, imie, naz, tel, mail, Czyadm, login, pas)
         )
 
     return ans
 
 
-def genPrzedmioty(howMany):
+def genPrzedmioty(howMany=len(przedmioty)):
     ans = []
     random.shuffle(przedmioty)
     for id, nazwa_przedmiotu in zip(range(howMany), przedmioty):
         ans.append(
-            "INSERT INTO Przedmiot VALUES({},\"{}\");"
+            "INSERT INTO Przedmiot VALUES({},\'{}\');"
             .format(id, nazwa_przedmiotu)
         )
     return ans
@@ -80,7 +80,7 @@ def genKlasy(howMany):
         year = math.floor(id / howMany) + 1
         class_number = letter + str(year)
         ans.append(
-            "INSERT INTO Klasa VALUES({},\"{}\");"
+            "INSERT INTO Klasa VALUES({},\'{}\');"
             .format(id, class_number)
         )
     return ans
@@ -107,7 +107,7 @@ def genOpiekunowie(howMany):
         ZgodaNaMail = random.randrange(0, 2)
         ZgodaNaSMS = random.randrange(0, 2)
         ans.append(
-            "INSERT INTO Opiekun VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",{},{});"
+            "INSERT INTO Opiekun VALUES({},\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',{},{});"
             .format(id, imie, naz, tel, mail, login, pas, ZgodaNaMail, ZgodaNaSMS)
         )
 
@@ -139,7 +139,7 @@ def genUczniowie(howMany, max_class_id, max_opiekun_id):
         opID = random.choice(classIDs)
         classID = random.choice(opiekunIds)
         ans.append(
-            "INSERT INTO Uczen VALUES({},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",{},{});"
+            "INSERT INTO Uczen VALUES({},\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',{},{});"
             .format(id, imie, naz, pesel, tel, mail, login, pas, opID, classID)
         )
 
@@ -157,7 +157,7 @@ def genNauczanaKlasaPrzedmiot(howMany, max_id_nauczyciela,
         klasID = random.choice(klasIDs)
         przedmiotID = random.choice(przedmiotIDs)
         ans.append(
-            "INSERT INTO Uczen VALUES({},{},{},{});"
+            "INSERT INTO NauczanaKlasaPrzedmiot VALUES({},{},{},{});"
             .format(id, nauczycielID, klasID, przedmiotID)
         )
 
@@ -178,9 +178,9 @@ def genProg(nauczyciel_id):
     ProcentNa4_5 = 80
     ProcentNa5 = 90
     ans.append(
-        "INSERT INTO Prog VALUES({},{},{},{},{},{},{},{},{},{});"
-        .format(id, nauczyciel_id, ProcentNa2, ProcentNa2_5,
-                ProcentNa3, ProcentNa3, ProcentNa3_5, ProcentNa4,
+        "INSERT INTO Prog VALUES({},{},{},{},{},{},{},{});"
+        .format(id, ProcentNa2, ProcentNa2_5,
+                ProcentNa3, ProcentNa3_5, ProcentNa4,
                 ProcentNa4_5, ProcentNa5)
     )
     return ans
@@ -192,10 +192,11 @@ def random_date(start=datetime.datetime.now()):
         datetime.timedelta(days=random.randrange(365),
                            hours=random.randrange(0, 24)
                            )
-    return curr
+    # SQL format daty
+    return curr.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def genTest(howMany, max_id_nauczyciela, max_prog_id, max_przedmiot_id):
+def genTest(howMany, max_id_nauczyciela, max_prog_id, max_przedmiot_id=len(przedmioty)):
     """
     howMany - ilość testów
     """
@@ -203,7 +204,7 @@ def genTest(howMany, max_id_nauczyciela, max_prog_id, max_przedmiot_id):
     nauczycielIDs = list(range(max_id_nauczyciela))
     progIDs = list(range(max_prog_id))
     przedmiotIDs = list(range(max_przedmiot_id))
-    id = 0
+
     for i in range(howMany):
         nazwa = "Test" + str(i)
         IDPrzedmiotu = random.choice(przedmiotIDs)
@@ -212,12 +213,8 @@ def genTest(howMany, max_id_nauczyciela, max_prog_id, max_przedmiot_id):
         DataTestu = random_date()
         MaxLiczbaPytan = random.randrange(40)
         ans.append(
-            "INSERT INTO Prog VALUES({},\"{}\",{},{},{},{},{},);"
-            .format(id, nazwa, IDNauczyciela,
+            "INSERT INTO Test VALUES({},\'{}\',{},{},{},\'{}\',{});"
+            .format(i, nazwa, IDNauczyciela,
                     IDProgu, IDPrzedmiotu, DataTestu, MaxLiczbaPytan)
         )
     return ans
-
-
-for i in genNauczyciele(10):
-    print(i)
