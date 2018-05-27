@@ -29,6 +29,44 @@ imiona = meskie
 imiona.extend(zenskie)
 
 
+def genTestKlasa(howMany, max_id_test, max_id_klasa):
+    ans = []
+    testIDs = list(range(max_id_test))
+    klassIDs = list(range(max_id_test))
+    for id in range(howMany):
+        testID = random.choice(testIDs)
+        klassID = random.choice(klassIDs)
+        ans.append(
+            "INSERT INTO TestKlasa VALUES({},{},{});"
+            .format(id, testID, klassID)
+        )
+    return ans
+
+
+def genOceny(howMany, max_id_test, max_id_ucznen,
+             max_id_nauczyciel, max_przedmiot_id=len(przedmioty)):
+    ans = []
+    testIDs = list(range(max_id_test))
+    ucznenIDs = list(range(max_id_ucznen))
+    nauczycielIDs = list(range(max_id_nauczyciel))
+    przedmiotIDs = list(range(max_przedmiot_id))
+    oceny = [1, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+    for id in range(howMany):
+        testID = random.choice(testIDs)
+        ucznenID = random.choice(ucznenIDs)
+        nauczycielID = random.choice(nauczycielIDs)
+        przedmiotID = random.choice(przedmiotIDs)
+        ocena = random.choice(oceny)
+        data = random_date()
+        ans.append(
+            "INSERT INTO Ocena VALUES({},{},{},{},{},{},\'{}\');"
+            .format(id, testID, ucznenID, ocena, nauczycielID,
+                    przedmiotID, data)
+        )
+
+    return ans
+
+
 def genNauczyciele(howMany):
     ans = []
     imiona_ = [random.choice(imiona) for _ in range(howMany)]
@@ -136,8 +174,8 @@ def genUczniowie(howMany, max_class_id, max_opiekun_id):
                                                             Emaile,
                                                             UserLogin,
                                                             hasla):
-        opID = random.choice(classIDs)
-        classID = random.choice(opiekunIds)
+        opID = random.choice(opiekunIds)
+        classID = random.choice(classIDs)
         ans.append(
             "INSERT INTO Uczen VALUES({},\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',\'{}\',{},{});"
             .format(id, imie, naz, pesel, tel, mail, login, pas, opID, classID)
