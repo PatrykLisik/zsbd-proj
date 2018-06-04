@@ -484,3 +484,314 @@ WHERE MaxLiczbaPytan = ( SELECT MAX(Test.MaxLiczbaPytan) as maksymalna_liczba_py
 SELECT Test.Nazwa
 FROM Test 
 WHERE MaxLiczbaPytan = ( SELECT MIN(Test.MaxLiczbaPytan) as maksymalna_liczba_pytan FROM Test)
+
+GO
+--Procedura która dodaje nową ocenę do bazy i wstawia aktualną datę jako datę otrzymania
+
+--drop procedure dodanieOceny
+CREATE PROCEDURE dodanieOceny @idTestu INT, @idUcznia INT, @ocena INT, @idNauczyciela INT, @idPrzedmiotu INT
+AS
+BEGIN 
+BEGIN TRY
+	IF (@ocena = 2 or @ocena = 2.5 or @ocena = 3 or @ocena = 3.5 or @ocena = 4 or @ocena = 4.5 or @ocena = 5)
+	BEGIN 
+		DECLARE @a INT
+		select @a = max(IDOceny) from Ocena
+		INSERT INTO Ocena (IDOceny, IDTestu, IDUcznia, Ocena, IDNauczyciela, IDPrzedmiotu, DataOtrzymania)
+		VALUES (@a+1, @idTestu, @idUcznia, @ocena, @idNauczyciela, @idPrzedmiotu, GETDATE())
+	END
+	ELSE 
+	BEGIN
+	RAISERROR('Nie ma takiej oceny!',16,1); 
+	END 
+END TRY
+BEGIN CATCH
+	DECLARE @msg NVARCHAR(4000) =   ERROR_MESSAGE();
+	DECLARE @severity tinyint =   ERROR_SEVERITY();
+	DECLARE @state tinyint =   ERROR_STATE();
+
+	RAISERROR (@msg,@severity,@state);
+END CATCH
+END
+GO
+
+--select * from Ocena
+--exec dodanieOceny 1, 2, 3.5, 0, 4
+--select * from Ocena
+
+
+--Funkcja która pokazuje kto uczy jakich przedmiotów lub klas
+--parametry: ID nauczyciela; wybór k - klasa; p - przedmiot
+-- Podaje imię i nazwisko nauczyciela oraz listę klas lub przedmiotów jak string
+
+--drop FUNCTION fn_nauczyciel_jakie_przedmioty_i_klasy
+CREATE FUNCTION fn_nauczyciel_jakie_przedmioty_i_klasy (@id int, @wybor varchar(1)) RETURNS varchar(200)
+AS
+BEGIN
+	DECLARE @imie varchar (25)
+	DECLARE @nazwisko varchar (25)
+
+	select @imie = Imie from Nauczyciel where IDNauczyciela=@id
+	select @nazwisko = Nazwisko from Nauczyciel where IDNauczyciela=@id
+
+	DECLARE @str varchar (200)
+	set @str = @imie+ ' ' + @nazwisko
+	DECLARE @result NVARCHAR(MAX)
+
+	if @wybor='k' or @wybor ='K'
+	BEGIN
+		if (select count(IDKlasy) FROM NauczanaKlasaPrzedmiot WHERE IDNauczyciela = @id) = 0
+			set @str = @str +' nie uczy zadnej klasy.'
+		else
+		BEGIN
+			set @str = @str +' uczy nastepujace klasy: '
+
+			SELECT @result = STUFF(
+                        (   SELECT ', ' + CONVERT(NVARCHAR(20), Nazwa) 
+                            FROM Klasa 
+                            WHERE IDKlasy IN (SELECT IDKlasy from NauczanaKlasaPrzedmiot where IDNauczyciela = @id) 
+                            FOR xml path('')
+                        )
+                        , 1
+                        , 1
+                        , '')
+			set @str = @str + @result
+		END
+	END
+	ELSE IF @wybor='p' or @wybor='P'
+	BEGIN
+		if (select count(IDPrzedmiotu) FROM NauczanaKlasaPrzedmiot WHERE IDNauczyciela = @id) = 0
+			set @str = @str +' nie uczy zadnego przedmiotu.'
+		else
+		BEGIN
+			set @str = @str +' uczy nastepujacych przedmiotow: '
+			SELECT @result = STUFF(
+                        (   SELECT ', ' + CONVERT(NVARCHAR(20), Nazwa) 
+                            FROM Przedmiot 
+                            WHERE IDPrzedmiotu IN (SELECT IDPrzedmiotu from NauczanaKlasaPrzedmiot where IDNauczyciela = @id) 
+                            FOR xml path('')
+                        )
+                        , 1
+                        , 1
+                        , '')
+			set @str = @str + @result
+		END
+	END
+	ELSE
+		SET @str = 'Wybierz k lub p!'
+
+	RETURN @str
+END
+GO
+
+--declare @b varchar (200)
+--exec @b = fn_nauczyciel_jakie_przedmioty_i_klasy 1, 'p'
+--select @b
+
+
+--Wyświetlić klasę i liczbę testów które jej uczniowie pisali od początku:
+-- a) aktualnego miesiąca
+-- b) początku roku szkolnego
+
+--a
+SELECT Klasa.Nazwa as NazwaKlasy, COUNT(TestKlasa.IDTestu) as LiczbaTestowTenMiesiac
+from Klasa, TestKlasa, Test
+where Klasa.IDKlasy=TestKlasa.IDKlasy
+AND Test.IDTestu=TestKlasa.IDTestu
+AND MONTH(Test.DataTestu)= MONTH(getdate())
+AND YEAR(Test.DataTestu)= YEAR(getdate())
+GROUP BY Klasa.Nazwa
+
+--b
+SELECT Klasa.Nazwa as NazwaKlasy, COUNT(TestKlasa.IDTestu) as LiczbaTestowOdPoczatkuRoku
+from Klasa, TestKlasa, Test
+where Klasa.IDKlasy=TestKlasa.IDKlasy
+AND Test.IDTestu=TestKlasa.IDTestu
+AND (
+		(MONTH(Test.DataTestu) > 0 AND MONTH(Test.DataTestu) < 9 AND MONTH(getdate()) > 0 AND MONTH(getdate()) < 9 
+		AND YEAR(Test.DataTestu)= YEAR(getdate()) )
+		OR
+		(MONTH(Test.DataTestu) > 9 AND MONTH(Test.DataTestu) < 12 AND MONTH(getdate()) > 9 AND MONTH(getdate()) < 12 
+		AND YEAR(Test.DataTestu)= YEAR(getdate()) )
+		OR
+		(MONTH(Test.DataTestu) > 9 AND MONTH(Test.DataTestu) < 12 AND MONTH(getdate()) > 0 AND MONTH(getdate()) < 9 
+		AND YEAR(Test.DataTestu)= YEAR(getdate())-1 )
+	)
+GROUP BY Klasa.Nazwa
+GO
+
+--wyzwalacze
+
+--zamiast usuniecia ucznia wypelnia jego dane nullami zeby nie bylo konfliktu z innymi tabelami
+--oraz kpiuje czesc danych do tabeli archiwum
+
+--drop trigger tt_CopyToArchive
+create trigger tt_CopyToArchive
+on Uczen instead of delete
+as
+insert INTO UczenArchiwum (IDUcznia, Imie, Nazwisko, Pesel, IDOpiekuna, IDKlasy)
+select IDUcznia, Imie, Nazwisko, Pesel, IDOpiekuna, IDKlasy from deleted
+
+declare @a int
+select @a = IDUcznia from deleted
+update Uczen
+set Imie =null, Nazwisko=null, Pesel=null, Email=null, Telefon=null, UserLogin=null, Haslo=null
+where IDUcznia = @a
+UPDATE UczenArchiwum
+set DataUsuniecia = getdate()
+where IDUcznia = @a
+GO
+
+--select * from Uczen where IDUcznia =4
+--select * from UczenArchiwum where IDUcznia = 4
+--DELETE FROM Uczen where IDUcznia = 4
+--select * from Uczen where IDUcznia =4
+--select * from UczenArchiwum where IDUcznia = 4
+
+
+--wyzwalacz ktory nie pozwoli zmienic hasla nauczyciela jesli
+--nie spelnia wymogu: min. 8 znakow
+
+create trigger tt_psw_constraint1
+on Nauczyciel after update
+as
+DECLARE @haslo varchar(15)
+DECLARE @id int
+SELECT @haslo = Haslo from inserted
+SELECT @id = IDNauczyciela from inserted
+if LEN(@haslo)<8
+BEGIN
+	SELECT 'Haslo musi miec co najmniej 8 znakow dlugosci!'
+	update Nauczyciel
+	set Haslo = (select Haslo from deleted where IDNauczyciela = @id)
+	where IDNauczyciela = @id
+END
+GO
+
+
+
+--wyzwalacz ktory nie pozwoli zmienic hasla ucznia jesli
+--nie spelnia wymogu: min. 1 duża litera i jedna cyfra
+
+create trigger tt_psw_constraint2
+on Uczen after update
+as
+DECLARE @haslo varchar(15)
+DECLARE @id int
+SELECT @haslo = Haslo from inserted
+SELECT @id = IDUcznia from inserted
+if @haslo NOT LIKE '%[A-Z]%' OR @haslo NOT LIKE '%[1-9]%'
+BEGIN
+	SELECT 'Haslo musi zawierac jedna duza litere i jedna cyfre'
+	update Uczen
+	set Haslo = (select Haslo from deleted where IDUcznia = @id)
+	where IDUcznia = @id
+END
+GO
+
+--select * from Uczen where IDUcznia = 1
+--update Uczen
+--set Haslo ='bb5bbCbi'
+--where IDUcznia = 1
+--select * from Uczen where IDUcznia = 1
+
+
+--//////////////////////////////////////////////--
+
+
+--Wyświetl nauczycieli, którzy uczą w każdej klasie
+--przynajmniej jednego przedmiotu.
+
+SELECT Nazwisko FROM Nauczyciel
+WHERE NOT EXISTS
+	(SELECT * FROM Klasa
+	WHERE NOT EXISTS
+		(SELECT * FROM NauczanaKlasaPrzedmiot
+		WHERE NauczanaKlasaPrzedmiot.IDKlasy=Klasa.IDKlasy
+		AND NauczanaKlasaPrzedmiot.IDNauczyciela=Nauczyciel.IDNauczyciela))
+
+
+--Znaleźć klasy, w których nie istnieje żaden uczeń, który nie posiada
+--numeru telefonu i jego opiekun nie wyraził zgody na wysyłanie
+--wiadomości email i sms
+SELECT Nazwa from Klasa
+WHERE NOT EXISTS
+	(SELECT * FROM Uczen
+	WHERE Telefon is null
+	AND Uczen.IDKlasy=Klasa.IDKlasy
+	AND NOT EXISTS
+	(SELECT * FROM Opiekun
+	WHERE ZgodaNaMail = 0
+	AND ZgodaNaSMS = 0
+	AND Opiekun.IDOpiekuna = Uczen.IDUcznia)
+	)
+
+
+--Znaleźć uczniów którzy we WSZYSTKICH testach dostali ocenę 4 lub wyższą 
+
+SELECT * FROM Uczen
+WHERE NOT EXISTS
+	(SELECT * FROM Ocena
+	WHERE Ocena < 4
+	AND Ocena.IDUcznia = Uczen.IDUcznia)
+AND Uczen.IDUcznia IN
+	(SELECT IDUcznia FROM Ocena)
+
+
+--Znaleźć wszystkich opiekunów którzy mają wyłącznie uczniów o średniej 4.0 i większej
+
+SELECT * FROM Opiekun
+WHERE NOT EXISTS
+	(SELECT * FROM Uczen
+	WHERE ((SELECT SUM (IDUcznia) FROM Ocena
+			WHERE Uczen.IDUcznia=Ocena.IDUcznia)
+			/(SELECT COUNT (IDUcznia) FROM Ocena WHERE Uczen.IDUcznia=Ocena.IDUcznia) < 4.0
+			OR Uczen.IDUcznia NOT IN (SELECT IDUcznia FROM Ocena)
+			)
+	AND Opiekun.IDOpiekuna=Uczen.IDOpiekuna
+	)
+
+--Wypisać jakie testy każda klasa będzie miała w nadchodzącym miesiącu.
+--Wyniki ułożyć najpierw wzgędem klas, potem przedmiotów, potem daty w
+--której test się odbędzie (od najbliższych).
+
+SELECT Klasa.Nazwa as Klasa, Test.Nazwa as Test FROM Klasa, Test, TestKlasa, Przedmiot
+WHERE Klasa.IDKlasy = TestKlasa.IDKlasy
+AND Test.IDTestu = TestKlasa.IDTestu
+AND Przedmiot.IDPrzedmiotu = Test.IDPrzedmiotu
+AND MONTH(Test.DataTestu) = MONTH(getdate())+1
+AND YEAR(Test.DataTestu) = YEAR(getdate())
+ORDER BY Klasa.Nazwa, Przedmiot.Nazwa, Test.DataTestu
+
+--select * from Test where MONTH(Test.DataTestu) = MONTH(getdate())+1
+go
+
+--rozmyte
+
+alter table Uczen
+add sound varchar (10)
+select * from Uczen
+
+go
+create trigger tt_rozmyte on Uczen
+for insert 
+as
+declare @personid int;
+select @personid=IDUcznia from inserted;
+update Uczen
+set sound=soundex(Imie) where IDUcznia=@personid;
+
+go
+create procedure getfuzzi(@personid int)
+         as
+         declare @sound varchar(10)
+         select @sound= sound from Uczen where IDUcznia=@personid
+         select IDUcznia,Imie,Nazwisko from Uczen
+         where sound=@sound
+
+exec getfuzzi 200
+
+select * from Uczen where IDUcznia = 200
+
+INSERT INTO Uczen (IDUcznia, Imie, Nazwisko, Pesel, Telefon, Email, UserLogin, Haslo, IDOpiekuna, IDKlasy)
+Values(205, 'Krzysgtar', 'Kazdepka', '97041809251', '664705778', 'jan@gmail.com','janek', 'zupa123', 5, 6)

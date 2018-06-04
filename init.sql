@@ -289,3 +289,25 @@ ALTER TABLE TestKlasa ADD CONSTRAINT IDKlasy_fk2 FOREIGN KEY (IDKlasy) REFERENCE
 
 GO
 
+CREATE TABLE UczenArchiwum
+
+    (IDUcznia INT
+
+	CONSTRAINT  IDUcznia_nn NOT NULL,
+
+	Imie VARCHAR(25),
+
+	Nazwisko VARCHAR(25),
+
+	Pesel VARCHAR(11),
+
+	IDOpiekuna INT,
+
+	IDKlasy INT,
+
+	DataUsuniecia DATE
+
+    );
+
+GO
+
