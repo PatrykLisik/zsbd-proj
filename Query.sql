@@ -205,12 +205,224 @@ GO
 --a.) do różnych klas
 --b.) do tej samej klasy
 
-SELECT Opiekun.IDOpiekuna, Uczen.IDUcznia 
-FROM Opiekun, Uczen
-WHERE Uczen.IDOpiekuna = Opiekun.IDOpiekuna 
-	  AND Uczen.IDUcznia IN ( SELECT Uczen.IDUcznia 
-							  FROM Opiekun, Uczen
-							  WHERE Uczen.IDOpiekuna = Opiekun.IDOpiekuna )
+--a
+SELECT DISTINCT Opiekun.Nazwisko 
+FROM Opiekun, (
+				SELECT opiekunowie_wielodzietni.IDOpiekuna, Klasa.Nazwa, COUNT(Uczen.IDUcznia) as liczba_dzieci_w_klasie
+				FROM Klasa, Uczen, (
+									--Wybieramy rodziców, ktorzy mają więcej niż jedno dziecko
+									SELECT Opiekun.IDOpiekuna
+									FROM Opiekun, Uczen
+									WHERE Uczen.IDOpiekuna = Opiekun.IDOpiekuna
+									GROUP BY Opiekun.IDOpiekuna
+									HAVING COUNT(Uczen.IDUcznia) >= 2
+									) opiekunowie_wielodzietni
+				WHERE Uczen.IDKlasy = Klasa.IDKlasy AND opiekunowie_wielodzietni.IDOpiekuna = Uczen.IDOpiekuna
+				GROUP BY opiekunowie_wielodzietni.IDOpiekuna, Klasa.Nazwa
+				HAVING COUNT(Uczen.IDUcznia) = 1
+				) id_opiekunow
+WHERE id_opiekunow.IDOpiekuna = Opiekun.IDOpiekuna
+ORDER BY Opiekun.Nazwisko
 
 
- 
+--b
+SELECT DISTINCT Opiekun.Nazwisko 
+FROM Opiekun, (
+				SELECT opiekunowie_wielodzietni.IDOpiekuna, Klasa.Nazwa, COUNT(Uczen.IDUcznia) as liczba_dzieci_w_klasie
+				FROM Klasa, Uczen, (
+									--Wybieramy rodziców, ktorzy mają więcej niż jedno dziecko
+									SELECT Opiekun.IDOpiekuna
+									FROM Opiekun, Uczen
+									WHERE Uczen.IDOpiekuna = Opiekun.IDOpiekuna
+									GROUP BY Opiekun.IDOpiekuna
+									HAVING COUNT(Uczen.IDUcznia) >= 2
+									) opiekunowie_wielodzietni
+				WHERE Uczen.IDKlasy = Klasa.IDKlasy AND opiekunowie_wielodzietni.IDOpiekuna = Uczen.IDOpiekuna
+				GROUP BY opiekunowie_wielodzietni.IDOpiekuna, Klasa.Nazwa
+				HAVING COUNT(Uczen.IDUcznia) >= 2
+				) id_opiekunow
+WHERE id_opiekunow.IDOpiekuna = Opiekun.IDOpiekuna
+ORDER BY Opiekun.Nazwisko
+
+--W każdej klasie oblicz liczbę uczniów zasługujących na świadectwo z
+--czerwonym paskiem (średnia większa, równa 4.75) oraz takich którzy nie
+--zdają do następnej klasy (średnia poniżej 2.0)
+--Wypisz tych uczniów i ich średnią 
+
+IF EXISTS (
+    SELECT * FROM sysobjects WHERE id = object_id('fn_slaby_czy_dobry_uczen') 
+    AND xtype IN (N'FN', N'IF', N'TF')
+)
+    DROP FUNCTION fn_slaby_czy_dobry_uczen
+GO
+
+CREATE FUNCTION fn_slaby_czy_dobry_uczen (@srednia decimal(3,2)) RETURNS VARCHAR(50)
+AS
+BEGIN
+DECLARE @feedback VARCHAR(25)
+	IF (@srednia >= 4.75)
+		SET @feedback = 'czerwony pasek'
+	ELSE IF (@srednia < 2.0)
+		SET @feedback = 'uczeń bez promocji'
+RETURN @feedback
+END
+GO
+
+SELECT Uczen.Nazwisko, Uczen.Imie, Klasa.Nazwa as klasa,
+	   CONVERT(decimal(3,2), ROUND(AVG(CAST(Ocena.Ocena as decimal(3,2))), 2)) as srednia,
+	   dbo.fn_slaby_czy_dobry_uczen(AVG(CAST(Ocena.Ocena as decimal(3,2)))) as informacja_zwrotna
+FROM Ocena, Uczen, Klasa
+WHERE Uczen.IDUcznia = Ocena.IDUcznia AND Klasa.IDKlasy = Uczen.IDKlasy
+GROUP BY Uczen.Nazwisko, Uczen.Imie, Klasa.Nazwa
+HAVING AVG(CAST(Ocena.Ocena as decimal(3,2))) >= 4.75 OR AVG(CAST(Ocena.Ocena as decimal(3,2))) < 2.0
+ORDER BY Klasa.Nazwa
+
+--Napisz procedurę, która pozwoli na podwyższenie lub obniżenie progu z
+--testu na konkretną ocenę. Procedura powinna przyjmować jako argumenty:
+--idTestu, ocena, nowy próg punktowy w procentach.
+
+IF EXISTS (SELECT * FROM sys.objects WHERE type = 'P' AND name = 'zmianaProgu')
+DROP PROCEDURE zmianaProgu
+GO
+
+CREATE PROCEDURE zmianaProgu @idTestu INT, @ocena INT, @nowyProg INT
+AS
+BEGIN 
+BEGIN TRY
+	IF (@ocena = 2)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa2 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE IF (@ocena = 2.5)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa2_5 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE IF (@ocena = 3)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa3 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE IF (@ocena = 3.5)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa3_5 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE IF (@ocena = 4.0)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa4 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE IF (@ocena = 4.5)
+	BEGIN 
+		UPDATE Prog 
+		SET Prog.ProcentNa4_5 = @nowyProg 
+		FROM Test
+		WHERE Prog.IDProgu = Test.IDProgu
+	END
+	ELSE 
+	BEGIN
+		RAISERROR('Nie ma takiej oceny',16,1); 
+	END 
+END TRY
+BEGIN CATCH
+	DECLARE @msg NVARCHAR(4000) =   ERROR_MESSAGE();
+	DECLARE @severity tinyint =   ERROR_SEVERITY();
+	DECLARE @state tinyint =   ERROR_STATE();
+
+	RAISERROR (@msg,@severity,@state);
+END CATCH
+		 
+
+END
+GO
+
+select Prog.* from Test,Prog where Prog.IDProgu = Test.IDProgu AND Test.IDTestu = 0
+EXEC Szkola..zmianaProgu 0, 7, 45
+GO
+select Prog.* from Test,Prog where Prog.IDProgu = Test.IDProgu AND Test.IDTestu = 0
+
+--Znaleźć nauczycieli, którzy są jednocześnie opiekunami 
+--(zakładając że mają po prostu to samo nazwisko).
+
+SELECT Nauczyciel.Nazwisko, Uczen.IDUcznia
+FROM Nauczyciel, Opiekun, Uczen
+WHERE Nauczyciel.Nazwisko = Opiekun.Nazwisko AND
+	  Uczen.IDOpiekuna = Opiekun.IDOpiekuna 
+
+--Sprawdź czy to prawda że dzieci nauczycieli mają wyższe oceny niż inne dzieci
+SELECT CONVERT(decimal(3,2), ROUND(AVG(CAST(uczniowie.srednia as decimal(3,2))), 2)) as srednia,
+	   'srednia dzieci nauczycieli' as informacja
+FROM Nauczyciel, Opiekun, Uczen,
+		 (
+		 SELECT Uczen.IDUcznia,
+		 CONVERT(decimal(3,2), ROUND(AVG(CAST(Ocena.Ocena as decimal(3,2))), 2)) as srednia
+		 FROM Ocena, Uczen
+		 WHERE Uczen.IDUcznia = Ocena.IDUcznia
+		 GROUP BY Uczen.IDUcznia
+		 ) uczniowie				
+WHERE Nauczyciel.Nazwisko = Opiekun.Nazwisko AND
+	  Uczen.IDOpiekuna = Opiekun.IDOpiekuna AND 
+	  uczniowie.IDUcznia = Uczen.IDUcznia
+UNION
+SELECT CONVERT(decimal(3,2), ROUND(AVG(CAST(uczniowie.srednia as decimal(3,2))), 2)),
+	   'srednia dzieci nie nauczycieli'
+FROM Nauczyciel, Opiekun, Uczen,
+		 (
+		 SELECT Uczen.IDUcznia,
+			CONVERT(decimal(3,2), ROUND(AVG(CAST(Ocena.Ocena as decimal(3,2))), 2)) as srednia
+	FROM Ocena, Uczen
+	WHERE Uczen.IDUcznia = Ocena.IDUcznia
+	GROUP BY Uczen.IDUcznia
+	) uczniowie
+							
+WHERE Nauczyciel.Nazwisko != Opiekun.Nazwisko AND
+	  Uczen.IDOpiekuna = Opiekun.IDOpiekuna AND 
+	  uczniowie.IDUcznia = Uczen.IDUcznia
+
+	--NIEPRAWDA - POGEOMCY MITÓW OBALILI KOLEJNY PRZESĄD
+
+--Znajdź nauczycieli, którzy uczą w szkole 
+--b) tylko jednego przedmiotu 
+--a) więcej niż jednego przedmiotu
+
+--b
+SELECT Nauczyciel.Nazwisko, COUNT(Przedmiot.Nazwa) as liczba_przedmiotow
+FROM Przedmiot, Nauczyciel, NauczanaKlasaPrzedmiot
+WHERE Nauczyciel.IDNauczyciela = NauczanaKlasaPrzedmiot.IDNauczyciela AND 
+	  NauczanaKlasaPrzedmiot.IDPrzedmiotu = Przedmiot.IDPrzedmiotu
+GROUP BY Nauczyciel.Nazwisko
+EXCEPT 
+SELECT Nauczyciel.Nazwisko, COUNT(Przedmiot.Nazwa) as liczba_przedmiotow
+FROM Przedmiot, Nauczyciel, NauczanaKlasaPrzedmiot
+WHERE Nauczyciel.IDNauczyciela = NauczanaKlasaPrzedmiot.IDNauczyciela AND 
+	  NauczanaKlasaPrzedmiot.IDPrzedmiotu = Przedmiot.IDPrzedmiotu
+GROUP BY Nauczyciel.Nazwisko
+HAVING (COUNT(Przedmiot.Nazwa)) >= 2
+
+--a
+SELECT Nauczyciel.Nazwisko, COUNT(Przedmiot.Nazwa) as liczba_przedmiotow
+FROM Przedmiot, Nauczyciel, NauczanaKlasaPrzedmiot
+WHERE Nauczyciel.IDNauczyciela = NauczanaKlasaPrzedmiot.IDNauczyciela AND 
+	  NauczanaKlasaPrzedmiot.IDPrzedmiotu = Przedmiot.IDPrzedmiotu
+GROUP BY Nauczyciel.Nazwisko
+HAVING (COUNT(Przedmiot.Nazwa)) >= 2
+
+--Dla wybranego testu pokaż ilu uczniów dostało jaką ocenę z tego testu.
+SELECT Test.Nazwa, Przedmiot.Nazwa, Ocena.Ocena, Uczen.Nazwisko
+FROM Test, Przedmiot, Ocena, Uczen
+WHERE Test.IDPrzedmiotu = Przedmiot.IDPrzedmiotu AND
+	  Test.IDTestu = Ocena.IDTestu AND
+	  Uczen.IDUcznia = Ocena.IDUcznia AND 
+	  Test.Nazwa = 'Test0'
