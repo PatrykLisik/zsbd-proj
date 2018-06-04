@@ -1,3 +1,5 @@
+USE Szkola
+
 INSERT INTO Nauczyciel VALUES(0,'Mateusz','Paw³owski','398523515','mateuszpaw³owski@gmail.com',0,'mateusz_paw³owski','CMF211');
 INSERT INTO Nauczyciel VALUES(1,'Agata','D±browski','264397773','agatad±browski@gmail.com',0,'agata_d±browski','EHA0DQ');
 INSERT INTO Nauczyciel VALUES(2,'Agata','Krajewski','546348680','agatakrajewski@gmail.com',0,'agata_krajewski','BXSA85');
